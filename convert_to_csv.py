@@ -1,0 +1,23 @@
+import csv
+
+raw_text = """The mess food is awful, it's uncooked and smells bad. Please check the quality control.
+My hostel room fan is not working. I submitted a request last week but no one came. Urgent!
+I need my grade verified for the Algorithms course. I think there was a clerical error.
+Staff at the administration office were rude and unhelpful when I asked about my fees.
+There's a massive water leak near Block C of the boys' hostel. It needs immediate repair.
+The quality of the chicken in the mess today was terrible. Tasted stale.
+I can't access the online portal for my subject registration. It keeps showing an error.
+Another complaint about the poor ventilation in the library study room. It's too hot.
+"""
+
+# Split the text by new lines
+complaints = [line.strip() for line in raw_text.strip().split("\n") if line.strip()]
+
+# Write to CSV
+with open("complaints.csv", "w", newline="") as file:
+    writer = csv.writer(file)
+    writer.writerow(["Complaint"])  # Header
+    for complaint in complaints:
+        writer.writerow([complaint])
+
+print("✅ complaints.csv created successfully!")
