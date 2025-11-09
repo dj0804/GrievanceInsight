@@ -11,13 +11,13 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Image
-                src="/next.svg"
-                alt="Logo"
-                width={80}
-                height={16}
-                className="dark:invert"
+              src="/symbol.jpeg"
+              alt="Logo"
+              width={40}
+              height={40}
+              className="dark:invert"
               />
-              <span className="text-xl font-bold text-gray-900">Hostel Portal</span>
+              <span className="text-xl font-bold text-gray-900">Dormify</span>
             </div>
             <nav className="flex space-x-6">
               <Link href="/submit" className="text-gray-600 hover:text-gray-900">
@@ -132,13 +132,13 @@ export default function Home() {
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-4">
               <Image
-                src="/next.svg"
+                src="/symbol.jpeg"
                 alt="Logo"
-                width={60}
-                height={12}
-                className="invert"
+                width={30}
+                height={30}
+                className="dark:invert"
               />
-              <span className="text-lg font-semibold">Hostel Portal</span>
+              <span className="text-lg font-semibold">Dormify</span>
             </div>
             <p className="text-gray-400">
               AI-powered grievance management for better hostel living

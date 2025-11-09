@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hostel Grievance Management System",
+  title: "Dormify - Hostel Grievance Portal",
   description: "AI-powered system for analyzing and managing hostel complaints",
 };
 
