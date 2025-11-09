@@ -11,6 +11,8 @@ import pandas as pd
 import io
 import uvicorn
 from grievance_summarizer import GrievanceSummarizer
+from database_utils import db_manager, create_tables
+import os
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -201,6 +203,178 @@ async def demo_analysis():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Demo processing error: {str(e)}")
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database tables on startup"""
+    try:
+        create_tables()
+        print("Database initialized successfully")
+    except Exception as e:
+        print(f"Database initialization failed: {e}")
+
+@app.get("/analytics/db")
+async def get_database_analytics():
+    """
+    Get analytics from the database instead of processing demo data.
+    
+    Returns:
+        DashboardResponse with analysis from stored data
+    """
+    try:
+        # Get statistics from database
+        stats = db_manager.get_grievance_stats()
+        
+        # Get recent grievances with analysis
+        recent_grievances = db_manager.get_all_grievances_with_analysis()
+        
+        # Process grievances for response
+        processed_complaints = []
+        for grievance in recent_grievances:
+            if grievance['category']:  # Only include analyzed grievances
+                processed_complaints.append({
+                    'id': grievance['id'],
+                    'raw_text': grievance['raw_text'],
+                    'clean_text': grievance['clean_text'],
+                    'category': grievance['category'],
+                    'sentiment': grievance['sentiment'],
+                    'urgency': grievance['urgency'],
+                    'submitted_at': grievance['submitted_at'].isoformat() if grievance['submitted_at'] else None,
+                    'processed_at': grievance['processed_at'].isoformat() if grievance['processed_at'] else None,
+                })
+        
+        # Generate top recurring issues from categories
+        category_items = sorted(stats['categories'].items(), key=lambda x: x[1], reverse=True)
+        top_recurring_issues = [category for category, count in category_items[:5]]
+        
+        # Generate weekly summary
+        total = stats['total']
+        negative_count = stats['sentiments'].get('negative', 0)
+        high_urgency_count = stats['urgencies'].get('high', 0)
+        
+        weekly_summary = f"Database contains {total} total grievances. {negative_count} show negative sentiment, and {high_urgency_count} are marked as high urgency. Top categories: {', '.join(top_recurring_issues[:3])}."
+        
+        return DashboardResponse(
+            total_complaints=total,
+            complaint_volume_by_category=stats['categories'],
+            sentiment_overview=stats['sentiments'],
+            urgency_distribution=stats['urgencies'],
+            weekly_summary=weekly_summary,
+            top_recurring_issues=top_recurring_issues,
+            processed_complaints=processed_complaints
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@app.post("/analyze/single/db")
+async def analyze_single_complaint_with_db(complaint: ComplaintInput):
+    """
+    Analyze a single complaint and store it in the database.
+    
+    Args:
+        complaint: Single complaint text
+        
+    Returns:
+        Analysis results with database ID
+    """
+    try:
+        # Store the grievance in database first
+        grievance_id = db_manager.insert_grievance(complaint.raw_text)
+        
+        # Process with AI
+        results = summarizer.process_complaints(data=[{"raw_text": complaint.raw_text}])
+        
+        if not results or not results['processed_complaints']:
+            raise HTTPException(status_code=500, detail="Failed to process complaint")
+        
+        analysis_data = results['processed_complaints'][0]
+        
+        # Store analysis result in database
+        analysis_id = db_manager.insert_analysis_result(
+            grievance_id=grievance_id,
+            category=analysis_data['category'],
+            sentiment=analysis_data['sentiment'],
+            urgency=analysis_data['urgency'],
+            clean_text=analysis_data['clean_text']
+        )
+        
+        return {
+            "grievance_id": grievance_id,
+            "analysis_id": analysis_id,
+            "complaint": complaint.raw_text,
+            "category": analysis_data['category'],
+            "sentiment": analysis_data['sentiment'],
+            "urgency": analysis_data['urgency'],
+            "clean_text": analysis_data['clean_text']
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
+
+@app.get("/grievances/recent")
+async def get_recent_grievances(limit: int = 10):
+    """
+    Get recent grievances from the database.
+    
+    Args:
+        limit: Number of grievances to return
+        
+    Returns:
+        List of recent grievances with analysis
+    """
+    try:
+        grievances = db_manager.get_recent_grievances(limit)
+        
+        # Format for response
+        formatted_grievances = []
+        for g in grievances:
+            formatted_grievances.append({
+                'id': g['id'],
+                'raw_text': g['raw_text'],
+                'category': g['category'],
+                'sentiment': g['sentiment'],
+                'urgency': g['urgency'],
+                'clean_text': g['clean_text'],
+                'submitted_at': g['submitted_at'].isoformat() if g['submitted_at'] else None
+            })
+        
+        return {"grievances": formatted_grievances}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@app.get("/grievances/search")
+async def search_grievances(q: str):
+    """
+    Search grievances by text content.
+    
+    Args:
+        q: Search query
+        
+    Returns:
+        List of matching grievances
+    """
+    try:
+        grievances = db_manager.search_grievances(q)
+        
+        # Format for response
+        formatted_grievances = []
+        for g in grievances:
+            formatted_grievances.append({
+                'id': g['id'],
+                'raw_text': g['raw_text'],
+                'category': g['category'],
+                'sentiment': g['sentiment'],
+                'urgency': g['urgency'],
+                'clean_text': g['clean_text'],
+                'submitted_at': g['submitted_at'].isoformat() if g['submitted_at'] else None
+            })
+        
+        return {"grievances": formatted_grievances, "query": q}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(

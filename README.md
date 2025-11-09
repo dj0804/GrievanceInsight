@@ -1,9 +1,17 @@
-# AI Grievance Summarizer API
+# AI Grievance Summarizer System
 
-A comprehensive AI-powered REST API for analyzing and summarizing hostel grievances. This system provides sentiment analysis, automatic categorization, trend extraction, and intelligent summarization of complaint data.
+A comprehensive AI-powered system for analyzing and managing hostel grievances. This system includes both a FastAPI backend for AI processing and a Next.js frontend for user interaction.
+
+## 🏗️ System Architecture
+
+- **Backend API**: FastAPI server with AI-powered analysis (Python)
+- **Frontend Portal**: Next.js web application for users and administrators (TypeScript/React)
+- **AI Processing**: Transformer models for sentiment analysis and categorization
+- **Data Analysis**: Pandas for trend extraction and statistical analysis
 
 ## 🚀 Features
 
+### Backend API
 - **AI-Powered Analysis**: Uses transformer models for sentiment analysis and text summarization
 - **Automatic Categorization**: Classifies complaints into Hostel, Mess, Academics, and Administration categories
 - **Trend Extraction**: Identifies recurring issues and patterns in complaints
@@ -11,12 +19,22 @@ A comprehensive AI-powered REST API for analyzing and summarizing hostel grievan
 - **RESTful API**: Easy integration with web applications and dashboards
 - **Real-time Processing**: Fast analysis with caching for better performance
 
+### Frontend Portal
+- **User Interface**: Clean, responsive design for grievance submission
+- **Admin Dashboard**: Comprehensive analytics and complaint management
+- **Real-time Analysis**: Instant feedback on submitted complaints
+- **CSV Upload**: Batch processing capability for administrators
+- **Data Visualization**: Charts and statistics for complaint trends
+
 ## 📋 Requirements
 
-- Python 3.8+
+- Python 3.8+ (for backend)
+- Node.js 18+ (for frontend)
 - Virtual environment (recommended)
 
 ## 🔧 Installation
+
+### Backend Setup
 
 1. **Clone the repository**:
    ```bash
@@ -30,26 +48,62 @@ A comprehensive AI-powered REST API for analyzing and summarizing hostel grievan
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
 
-3. **Install dependencies**:
+3. **Install Python dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
+### Frontend Setup
+
+1. **Navigate to frontend directory**:
+   ```bash
+   cd hostel-portal
+   ```
+
+2. **Install Node.js dependencies**:
+   ```bash
+   npm install
+   ```
+
 ## 🚀 Quick Start
 
-### Running the API Server
+### Option 1: Using Start Scripts
 
+**Start Backend API**:
+```bash
+./start_api.sh
+```
+
+**Start Frontend Portal** (in a new terminal):
+```bash
+./start_frontend.sh
+```
+
+### Option 2: Manual Start
+
+**Backend**:
 ```bash
 python app.py
 ```
 
-The API will be available at `http://localhost:8000`
+**Frontend**:
+```bash
+cd hostel-portal
+npm run dev
+```
 
-### API Documentation
+### Access the System
 
-Once the server is running, visit:
-- **Interactive API Docs**: `http://localhost:8000/docs`
-- **ReDoc Documentation**: `http://localhost:8000/redoc`
+- **Frontend Portal**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+
+## 📱 Frontend Pages
+
+- **Home** (`/`): System overview and navigation
+- **Submit Grievance** (`/submit`): User form for complaint submission
+- **Admin Dashboard** (`/admin`): Analytics and complaint management
+- **About** (`/about`): System information and documentation
 
 ## 📊 API Endpoints
 
