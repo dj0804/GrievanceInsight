@@ -4,6 +4,9 @@
 
 echo "🚀 Starting Hostel Grievance Backend API..."
 
+# Change to backend directory
+cd "$(dirname "$0")"
+
 # Check if virtual environment exists
 if [ ! -d ".venv" ]; then
     echo "📦 Creating Python virtual environment..."
