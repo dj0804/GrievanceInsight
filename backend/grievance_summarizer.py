@@ -113,7 +113,7 @@ class GrievanceSummarizer:
         # Simple keyword-based classification with fallback to random
         def classify_text(text):
             text_lower = text.lower()
-            if any(word in text_lower for word in ['hostel', 'room', 'fan', 'water', 'washroom', 'leak']):
+            if any(word in text_lower for word in ['hostel', 'room', 'fan', 'water', 'washroom', 'leak','roommate']):
                 return 'Hostel'
             elif any(word in text_lower for word in ['mess', 'food', 'chicken', 'quality']):
                 return 'Mess'

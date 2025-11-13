@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { submitGrievanceAction } from '@/app/actions/grievance-actions';
 
 export default function SubmitPage() {
   const [grievanceText, setGrievanceText] = useState('');
@@ -12,7 +11,7 @@ export default function SubmitPage() {
     email: '',
   });
   const [isPending, startTransition] = useTransition();
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error' | 'processing'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const router = useRouter();
 
@@ -25,36 +24,90 @@ export default function SubmitPage() {
       return;
     }
 
-    setSubmitStatus('idle');
+    setSubmitStatus('processing');
     setErrorMessage('');
 
-    // Use server action with transition
+    // Use API endpoint with automatic categorization
     startTransition(async () => {
       try {
-        const formData = new FormData();
-        formData.append('raw_text', grievanceText);
-        formData.append('name', userInfo.name);
-        formData.append('roomNumber', userInfo.roomNumber);
-        formData.append('email', userInfo.email);
+        // Prepare user info (only include fields that have values)
+        const userInfoForSubmission = {
+          ...(userInfo.name && { name: userInfo.name }),
+          ...(userInfo.roomNumber && { roomNumber: userInfo.roomNumber }),
+          ...(userInfo.email && { email: userInfo.email }),
+        };
 
-        const result = await submitGrievanceAction(formData);
+        let result = null;
+        let response = null;
 
-        if (result.success) {
-          setSubmitStatus('success');
-          setGrievanceText('');
-          setUserInfo({ name: '', roomNumber: '', email: '' });
-          
-          // Redirect to home page after 2 seconds
-          setTimeout(() => {
-            router.push('/');
-          }, 2000);
-        } else {
-          setErrorMessage(result.error || 'Failed to submit grievance');
-          setSubmitStatus('error');
+        // Try the primary grievances API first
+        try {
+          response = await fetch('/api/grievances', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              raw_text: grievanceText.trim(),
+              user_info: Object.keys(userInfoForSubmission).length > 0 ? userInfoForSubmission : null,
+            }),
+          });
+
+          result = await response.json();
+
+          if (response.ok && result.success) {
+            setSubmitStatus('success');
+            setGrievanceText('');
+            setUserInfo({ name: '', roomNumber: '', email: '' });
+            
+            console.log('Grievance submitted successfully via primary API:', result);
+            
+            setTimeout(() => {
+              router.push('/');
+            }, 3000);
+            return;
+          }
+        } catch (primaryError) {
+          console.warn('Primary API failed, trying CSV conversion fallback:', primaryError);
         }
+
+        // Fallback to CSV conversion API
+        try {
+          const csvResponse = await fetch('/api/grievances/convert-csv', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              raw_text: grievanceText.trim(),
+            }),
+          });
+
+          const csvResult = await csvResponse.json();
+
+          if (csvResponse.ok && csvResult.success) {
+            setSubmitStatus('success');
+            setGrievanceText('');
+            setUserInfo({ name: '', roomNumber: '', email: '' });
+            
+            console.log('Grievance submitted successfully via CSV conversion:', csvResult);
+            
+            setTimeout(() => {
+              router.push('/');
+            }, 3000);
+            return;
+          }
+        } catch (csvError) {
+          console.warn('CSV conversion fallback also failed:', csvError);
+        }
+
+        // If both methods failed
+        setErrorMessage(result?.error || 'Failed to submit and categorize grievance. Please try again.');
+        setSubmitStatus('error');
+
       } catch (error) {
         console.error('Error submitting grievance:', error);
-        setErrorMessage('An unexpected error occurred');
+        setErrorMessage('An unexpected error occurred while submitting your grievance');
         setSubmitStatus('error');
       }
     });
@@ -138,6 +191,24 @@ export default function SubmitPage() {
             </div>
 
             {/* Status Messages */}
+            {submitStatus === 'processing' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="animate-spin h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-blue-800">
+                      Processing and analyzing your grievance... This may take a moment.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {submitStatus === 'success' && (
               <div className="bg-green-50 border border-green-200 rounded-md p-4">
                 <div className="flex">
@@ -148,7 +219,7 @@ export default function SubmitPage() {
                   </div>
                   <div className="ml-3">
                     <p className="text-sm font-medium text-green-800">
-                      Grievance submitted successfully! Redirecting you to the home page...
+                      Grievance submitted and processed successfully! Your issue has been categorized and will be reviewed by our team. Redirecting you to the home page...
                     </p>
                   </div>
                 </div>
@@ -175,16 +246,16 @@ export default function SubmitPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isPending || !grievanceText.trim()}
+              disabled={isPending || !grievanceText.trim() || submitStatus === 'processing'}
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
             >
-              {isPending ? (
+              {isPending || submitStatus === 'processing' ? (
                 <>
                   <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Submitting...
+                  {submitStatus === 'processing' ? 'Processing & Analyzing...' : 'Submitting...'}
                 </>
               ) : (
                 'Submit Grievance'
