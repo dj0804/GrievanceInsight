@@ -2,6 +2,8 @@
 
 A comprehensive AI-powered system for analyzing and managing hostel grievances. This system includes both a FastAPI backend for AI processing and a Next.js frontend for user interaction.
 
+Made by Dev Jain and Avadhoot Mahadik :)
+
 ## 🏗️ System Architecture
 
 - **Backend API**: FastAPI server with AI-powered analysis (Python)
